@@ -36,6 +36,9 @@ baz1 qux1
 <dir dir2>
 foo2 bar2
 baz2 qux2
+<file file1>
+perms 0700
+</file>
 </dir>
 `,
 		map[string]interface{}{
@@ -47,6 +50,11 @@ baz2 qux2
 				"dir2": map[string]interface{}{
 					"foo2": "bar2",
 					"baz2": "qux2",
+					"file": map[string]interface{}{
+						"file1": map[string]interface{}{
+							"perms": "0700",
+						},
+					},
 				},
 			},
 		},
@@ -92,6 +100,37 @@ baz2 qux2
 					"foo1": "bar2",
 					"baz1": "qux1",
 					"baz2": "qux2",
+				},
+			},
+		},
+	},
+	{
+		// merging nested blocks
+		`
+<dir dir1>
+<file file1>
+foo1 bar1
+baz1 qux1
+</file>
+</dir>
+
+<dir dir1>
+<file file1>
+foo1 bar2
+baz2 qux2
+</file>
+</dir>
+`,
+		map[string]interface{}{
+			"dir": map[string]interface{}{
+				"dir1": map[string]interface{}{
+					"file": map[string]interface{}{
+						"file1": map[string]interface{}{
+							"foo1": "bar2",
+							"baz1": "qux1",
+							"baz2": "qux2",
+						},
+					},
 				},
 			},
 		},

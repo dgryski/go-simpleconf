@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"unicode"
@@ -39,13 +40,30 @@ func addValue(m map[string]interface{}, key string, value interface{}) error {
 		return nil
 	}
 
-	// string key? overwrite
+	// if target value is a string ...
 	if _, ok = mv.(string); ok {
+		if _, vok := value.(string); !vok {
+			return fmt.Errorf("can't overwrite string value for key %s with %s", key, reflect.TypeOf(value))
+		}
+
 		m[key] = value
 		return nil
 	}
 
-	return fmt.Errorf("can't overwrite string value for key %s with block", key)
+	// both blocks? merge
+	if _, ok := mv.(map[string]interface{}); ok {
+
+		var vbl map[string]interface{}
+		var vok bool
+		if vbl, vok = value.(map[string]interface{}); !vok {
+			return fmt.Errorf("don't know how to merge block for key %s with %s\n", key, reflect.TypeOf(value))
+		}
+
+		err := merge(m, key, "", vbl)
+		return err
+	}
+
+	return nil
 }
 
 func merge(m map[string]interface{}, blockType, blockName string, block map[string]interface{}) error {
