@@ -80,9 +80,9 @@ func TestReadConfig(t *testing.T) {
 
 	for i, tt := range tests {
 		r := strings.NewReader(tt.input)
-		m := New(r)
-		if !reflect.DeepEqual(m, tt.output) {
-			t.Errorf("failed test %d: got %#v expected %#v\n", i, m, tt.output)
+		m, err := NewFromReader(r)
+		if err != nil || !reflect.DeepEqual(m, tt.output) {
+			t.Errorf("failed test %d: got %#v expected %#v (err=%s)\n", i, m, tt.output, err)
 		}
 	}
 }

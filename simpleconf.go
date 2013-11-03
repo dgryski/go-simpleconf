@@ -1,68 +1,78 @@
 package simpleconf
 
-// TODO(dgryski): handle parse errors
+// TODO(dgryski): handle $ENVIRONMENT replacements
 // TODO(dgryski): handle quoted tokens?
 
 import (
 	"bufio"
+	"fmt"
 	"io"
-	"log"
 	"os"
-	"reflect"
 	"regexp"
 	"strings"
 	"unicode"
 )
 
-func New(r io.Reader) map[string]interface{} {
+// New loads a configuration from r
+func NewFromReader(r io.Reader) (map[string]interface{}, error) {
 	scanner := bufio.NewScanner(r)
-	m := parse(scanner, "")
-	return m
+	return parse(scanner, "")
 }
 
-func eatSpaces(line string) string {
-	return strings.TrimLeftFunc(line, unicode.IsSpace)
+func NewFromFile(file string) (map[string]interface{}, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewFromReader(f)
 }
 
-func match(line, text string) string {
-	return strings.TrimPrefix(line, text)
-}
-
-func addValue(m map[string]interface{}, key string, value interface{}) {
+func addValue(m map[string]interface{}, key string, value interface{}) error {
 
 	// no key? add
 	var mv interface{}
 	var ok bool
 	if mv, ok = m[key]; !ok {
 		m[key] = value
-		return
+		return nil
 	}
 
 	// string key? overwrite
 	if _, ok = mv.(string); ok {
 		m[key] = value
-		return
+		return nil
 	}
 
-	// otherwise complain
-	log.Fatalf("not overwriting string value for key %s with block\n", key, reflect.TypeOf(mv))
+	return fmt.Errorf("can't overwrite string value for key %s with block", key)
 }
 
-func merge(m map[string]interface{}, blockType, blockName string, block map[string]interface{}) {
+func merge(m map[string]interface{}, blockType, blockName string, block map[string]interface{}) error {
 
 	var blockMap map[string]interface{}
 
 	bm, ok := m[blockType]
 	if ok {
-		blockMap = bm.(map[string]interface{})
+		blockMap, ok = bm.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("key type conflict while merging block(%s, %s)", blockType, blockName)
+		}
 	} else {
 		blockMap = make(map[string]interface{})
 	}
 
 	if b, ok := blockMap[blockName]; ok {
 		oldBlock := b.(map[string]interface{})
+
+		if !ok {
+			return fmt.Errorf("internal error while merging block(%s, %s)", blockType, blockName)
+		}
+
 		for bk, bv := range block {
-			addValue(oldBlock, bk, bv)
+			err := addValue(oldBlock, bk, bv)
+			if err != nil {
+				return err
+			}
 		}
 		blockMap[blockName] = oldBlock
 	} else {
@@ -70,16 +80,17 @@ func merge(m map[string]interface{}, blockType, blockName string, block map[stri
 	}
 
 	m[blockType] = blockMap
+
+	return nil
 }
 
-func parse(scanner *bufio.Scanner, blockType string) map[string]interface{} {
+func parse(scanner *bufio.Scanner, blockType string) (map[string]interface{}, error) {
 
 	m := make(map[string]interface{})
 
 	for scanner.Scan() {
 		line := scanner.Text()
-
-		line = eatSpaces(line)
+		line = strings.TrimLeftFunc(line, unicode.IsSpace)
 
 		if len(line) == 0 || line[0] == '#' {
 			// blank line or comment, skip
@@ -87,65 +98,94 @@ func parse(scanner *bufio.Scanner, blockType string) map[string]interface{} {
 		}
 
 		if strings.HasPrefix(line, "include") {
-			include := parseInclude(scanner, line)
-			log.Println("include=", include)
+			include, err := parseInclude(scanner, line)
+			if err != nil {
+				return nil, fmt.Errorf("error processing include %s: %s", line, err)
+			}
+
+			for k, v := range include {
+				err := addValue(m, k, v)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			continue
-			// merge m and include
 		}
 
 		if line[0] == '<' && line[1] == '/' {
 			strs := closeRegex.FindStringSubmatch(line)
 			if strs[1] != blockType {
-				log.Fatal("unexpected closing block")
+				return nil, fmt.Errorf("unexpected closing block while looking for %s", blockType)
 			}
 
-			return m
+			return m, nil
 		}
 
 		if line[0] == '<' {
-			blockType, blockName, block := parseBlock(scanner, line)
+			blockType, blockName, block, err := parseBlock(scanner, line)
+			if err != nil {
+				return nil, err
+			}
 
-			merge(m, blockType, blockName, block)
+			err = merge(m, blockType, blockName, block)
+			if err != nil {
+				return nil, err
+			}
+
 			continue
 		}
 
 		// single-line config item
-		k, v := parseItem(line)
-		addValue(m, k, v)
+		k, v, err := parseItem(line)
+		if err != nil {
+			return nil, err
+		}
+		err = addValue(m, k, v)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return m
+	return m, nil
 }
 
 // include filename
-func parseInclude(scanner *bufio.Scanner, line string) map[string]interface{} {
-	line = match(line, "include")
+func parseInclude(scanner *bufio.Scanner, line string) (map[string]interface{}, error) {
 
-	line = strings.TrimSpace(line)
-	r, err := os.Open(line)
+	file := strings.TrimSpace(strings.TrimPrefix(line, "include"))
+
+	r, err := os.Open(file)
 	if err != nil {
-		log.Fatalf("can't open config file: ", err)
+		return nil, err
 	}
 
 	newscanner := bufio.NewScanner(r)
-	m := parse(newscanner, "")
-
-	return m
+	return parse(newscanner, "")
 }
 
 var blockRegex = regexp.MustCompile(`^\s*<\s*(\w+)\s+(.+?)\s*>\s*$`)
 var closeRegex = regexp.MustCompile(`^\s*</\s*(\w+)\s*>\s*$`)
 
-func parseBlock(scanner *bufio.Scanner, line string) (string, string, map[string]interface{}) {
+// <foo bar>
+// baz qux
+// </foo>
+func parseBlock(scanner *bufio.Scanner, line string) (string, string, map[string]interface{}, error) {
 	strs := blockRegex.FindStringSubmatch(line)
 	blockType, blockName := strs[1], strs[2]
-	m := parse(scanner, blockType)
-	return blockType, blockName, m
+	m, err := parse(scanner, blockType)
+	return blockType, blockName, m, err
 }
 
-var lineRegex = regexp.MustCompile(`^\s*(\w*)\s*=?\s*(.+)\s*$`)
+var lineRegex = regexp.MustCompile(`^\s*(\w*)(?:(?:\s+=\s+)|(?:\s+))(.+?)\s*$`)
 
-func parseItem(line string) (string, string) {
+// var = val
+func parseItem(line string) (string, string, error) {
 	strs := lineRegex.FindStringSubmatch(line)
-	return strs[1], strs[2]
+
+	if len(strs) != 3 {
+		return "", "", fmt.Errorf("error parsing line [%s]", line)
+	}
+
+	return strs[1], strs[2], nil
 }
