@@ -52,6 +52,28 @@ baz2 qux2
 		},
 	},
 	{
+		// unnamed blocks
+		`
+<dir>
+foo1 bar1
+baz1 qux1
+</dir>
+
+<dir>
+foo1 bar2
+baz2 qux2
+</dir>
+`,
+		map[string]interface{}{
+			"dir": map[string]interface{}{
+				"foo1": "bar2",
+				"baz1": "qux1",
+				"baz2": "qux2",
+			},
+		},
+	},
+
+	{
 		// block merging, overwrite and add
 		`
 <dir dir1>

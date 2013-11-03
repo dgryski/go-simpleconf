@@ -62,7 +62,14 @@ func merge(m map[string]interface{}, blockType, blockName string, block map[stri
 		blockMap = make(map[string]interface{})
 	}
 
-	if b, ok := blockMap[blockName]; ok {
+	if blockName == "" {
+		for bk, bv := range block {
+			err := addValue(blockMap, bk, bv)
+			if err != nil {
+				return err
+			}
+		}
+	} else if b, ok := blockMap[blockName]; ok {
 		oldBlock := b.(map[string]interface{})
 
 		if !ok {
@@ -165,7 +172,7 @@ func parseInclude(scanner *bufio.Scanner, line string) (map[string]interface{}, 
 	return parse(newscanner, "")
 }
 
-var blockRegex = regexp.MustCompile(`^\s*<\s*(\w+)\s+(.+?)\s*>\s*$`)
+var blockRegex = regexp.MustCompile(`^\s*<\s*(\w+)\s*(.+?)?\s*>\s*$`) // ugly regexp :(
 var closeRegex = regexp.MustCompile(`^\s*</\s*(\w+)\s*>\s*$`)
 
 // <foo bar>
@@ -173,7 +180,15 @@ var closeRegex = regexp.MustCompile(`^\s*</\s*(\w+)\s*>\s*$`)
 // </foo>
 func parseBlock(scanner *bufio.Scanner, line string) (string, string, map[string]interface{}, error) {
 	strs := blockRegex.FindStringSubmatch(line)
-	blockType, blockName := strs[1], strs[2]
+
+	var blockType, blockName string
+
+	if strs == nil {
+		return "", "", nil, fmt.Errorf("error parsing block header [%s]", line)
+	}
+
+	blockType, blockName = strs[1], strs[2]
+
 	m, err := parse(scanner, blockType)
 	return blockType, blockName, m, err
 }
