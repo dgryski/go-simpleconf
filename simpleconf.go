@@ -13,12 +13,13 @@ import (
 	"unicode"
 )
 
-// New loads a configuration from r
+// NewFromReader loads a configuration from r
 func NewFromReader(r io.Reader) (map[string]interface{}, error) {
 	scanner := bufio.NewScanner(r)
 	return parse(scanner, "")
 }
 
+// NewFromFile loads a configuration file
 func NewFromFile(file string) (map[string]interface{}, error) {
 	f, err := os.Open(file)
 	if err != nil {
