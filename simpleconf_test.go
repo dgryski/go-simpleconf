@@ -35,7 +35,17 @@ EOT
 		},
 	},
 	{
-		// array blocks
+		// arrays
+		`
+entry1
+entry2
+entry3
+`,
+		map[string]interface{}{"entry1": "", "entry2": "", "entry3": ""},
+	},
+
+	{
+		// array block
 		`
 <array>
     entry1
@@ -44,10 +54,9 @@ EOT
 </array>
 `,
 		map[string]interface{}{
-			"array": []string{"entry1", "entry2", "entry3"},
+			"array": map[string]interface{}{"entry1": "", "entry2": "", "entry3": ""},
 		},
 	},
-
 	{
 		// kv blocks
 		`
