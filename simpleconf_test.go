@@ -26,13 +26,18 @@ longdesc <<EOT
 really long description
 with extra stuff
 EOT
+   indenteddesc <<EOT
+   a thing which is
+   indented a bit
+   EOT
 `,
 		map[string]interface{}{
-			"foo":      "bar",
-			"baz":      "qux",
-			"optional": "equalsign",
-			"desc":     "long line with at least two continuation characters",
-			"longdesc": "really long description\nwith extra stuff",
+			"foo":          "bar",
+			"baz":          "qux",
+			"optional":     "equalsign",
+			"desc":         "long line with at least two continuation characters",
+			"longdesc":     "really long description\nwith extra stuff",
+			"indenteddesc": "a thing which is\nindented a bit",
 		},
 	},
 	{

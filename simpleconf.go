@@ -248,7 +248,11 @@ func parseItem(scanner *bufio.Scanner, line string) (string, string, error) {
 			for scanner.Scan() {
 				line = scanner.Text()
 				if strings.HasSuffix(line, strs[1]) {
-					// TODO(dgryski): calculate and trim indentation from value
+					indent := strings.TrimSuffix(line, strs[1])
+					s := strings.Replace(buf.String(), indent, "", 1)
+					s = strings.Replace(s, "\n"+indent, "\n", -1)
+					buf.Reset()
+					buf.WriteString(s)
 					break
 				}
 				if nl {
