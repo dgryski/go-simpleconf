@@ -5,6 +5,7 @@ package simpleconf
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -163,7 +164,7 @@ func parse(scanner *bufio.Scanner, blockType string) (map[string]interface{}, er
 		}
 
 		// single-line config item
-		k, v, err := parseItem(line)
+		k, v, err := parseItem(scanner, line)
 		if err != nil {
 			return nil, err
 		}
@@ -211,15 +212,55 @@ func parseBlock(scanner *bufio.Scanner, line string) (string, string, map[string
 	return blockType, blockName, m, err
 }
 
-var lineRegex = regexp.MustCompile(`^\s*(\w*)(?:(?:\s+=\s+)|(?:\s+))(.+?)\s*$`)
+//var lineRegex = regexp.MustCompile(`^\s*(\w*)(?:(?:\s+=\s+)|(?:\s+))(.+?)\s*$`)
 
-// var = val
-func parseItem(line string) (string, string, error) {
-	strs := lineRegex.FindStringSubmatch(line)
+var tokRegex = regexp.MustCompile(`^\s*(\S+)\s*=?\s*`)
 
-	if len(strs) != 3 {
+// var = val1 val2 val3
+// var val val2
+// val
+var heredocRegexp = regexp.MustCompile(`<<(\w+)$`)
+
+func parseItem(scanner *bufio.Scanner, line string) (string, string, error) {
+
+	strs := tokRegex.FindStringSubmatch(line)
+
+	if len(strs) != 2 {
 		return "", "", fmt.Errorf("error parsing line [%s]", line)
 	}
 
-	return strs[1], strs[2], nil
+	tok := strs[1]
+	line = strings.TrimPrefix(line, strs[0])
+
+	var buf bytes.Buffer
+
+	// if we have a value, check for continuation characters and heredocs
+	if len(line) > 0 {
+
+		if line[len(line)-1] == '\\' {
+			for line[len(line)-1] == '\\' && scanner.Scan() {
+				buf.WriteString(line[:len(line)-1])
+				line = scanner.Text()
+			}
+			buf.WriteString(line)
+		} else if strs := heredocRegexp.FindStringSubmatch(line); len(strs) != 0 {
+			nl := false
+			for scanner.Scan() {
+				line = scanner.Text()
+				if strings.HasSuffix(line, strs[1]) {
+					// TODO(dgryski): calculate and trim indentation from value
+					break
+				}
+				if nl {
+					buf.WriteByte('\n')
+				}
+				buf.WriteString(line)
+				nl = true
+			}
+		} else {
+			buf.WriteString(line)
+		}
+	}
+
+	return tok, buf.String(), nil
 }

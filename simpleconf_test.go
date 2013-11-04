@@ -20,7 +20,8 @@ foo bar
 baz qux
 optional = equalsign
 desc long line with \
-continuation character
+at least two \
+continuation characters
 longdesc <<EOT
 really long description
 with extra stuff
@@ -30,8 +31,8 @@ EOT
 			"foo":      "bar",
 			"baz":      "qux",
 			"optional": "equalsign",
-			"desc":     "long line with continuation character",
-			"longdesc": "really long description with\nextra stuff",
+			"desc":     "long line with at least two continuation characters",
+			"longdesc": "really long description\nwith extra stuff",
 		},
 	},
 	{
