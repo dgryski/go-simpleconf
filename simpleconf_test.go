@@ -73,7 +73,7 @@ entry3
 		// kv blocks
 		`
 <dir dir1> # ignore this comment
-foo1 bar1
+foo1 bar1 # this one too
 baz1 qux1
 </dir>
 
