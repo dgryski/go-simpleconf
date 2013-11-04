@@ -20,6 +20,7 @@ foo bar
 baz qux
 valuewith trailing spaces    
 optional = equalsign
+equals= nospace
 UPPERCASE lowercase
 desc long line with \
 at least two \
@@ -39,6 +40,7 @@ EOT
 			"optional":     "equalsign",
 			"valuewith":    "trailing spaces",
 			"uppercase":    "lowercase",
+			"equals":       "nospace",
 			"desc":         "long line with at least two continuation characters",
 			"longdesc":     "really long description\nwith extra stuff",
 			"indenteddesc": "a thing which is\nindented a bit",

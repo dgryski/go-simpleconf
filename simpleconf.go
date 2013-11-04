@@ -273,7 +273,7 @@ func parseBlock(state *parser, line string) (string, string, map[string]interfac
 	return strings.ToLower(blockType), strings.ToLower(blockName), m, err
 }
 
-var keyRegex = regexp.MustCompile(`^\s*(\S+)\s*=?\s*`)
+var keyRegex = regexp.MustCompile(`(\s*=\s*|\s+)`)
 
 // var = val1 val2 val3
 // var val val2
@@ -282,14 +282,19 @@ var heredocRegexp = regexp.MustCompile(`<<(\w+)$`)
 
 func parseItem(state *parser, line string) (string, string, error) {
 
-	strs := keyRegex.FindStringSubmatch(line)
+	strs := keyRegex.Split(line, 2)
 
-	if len(strs) != 2 {
+	if len(strs) == 0 {
 		return "", "", fmt.Errorf("error parsing line [%s]", line)
 	}
 
-	key := strings.ToLower(strs[1])
-	line = strings.TrimPrefix(line, strs[0])
+	if len(strs) == 1 {
+		// just a key
+		return strings.ToLower(strs[0]), "", nil
+	}
+
+	key := strings.ToLower(strs[0])
+	line = strs[1]
 
 	var buf bytes.Buffer
 
