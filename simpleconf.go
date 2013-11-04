@@ -335,5 +335,14 @@ func parseItem(state *parser, line string) (string, string, error) {
 		}
 	}
 
-	return key, buf.String(), nil
+	val := buf.String()
+
+	switch val {
+	case "yes", "true":
+		val = "1"
+	case "no", "false":
+		val = "0"
+	}
+
+	return key, val, nil
 }

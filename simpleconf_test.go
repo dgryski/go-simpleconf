@@ -18,6 +18,10 @@ var tests = []struct {
 
 foo bar
 baz qux
+yes yes
+no no
+t true
+f false
 valuewith trailing spaces    
 optional = equalsign
 equals= nospace
@@ -44,6 +48,10 @@ EOT
 			"desc":         "long line with at least two continuation characters",
 			"longdesc":     "really long description\nwith extra stuff",
 			"indenteddesc": "a thing which is\nindented a bit",
+			"yes":          "1",
+			"no":           "0",
+			"t":            "1",
+			"f":            "0",
 		},
 	},
 	{
