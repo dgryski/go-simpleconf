@@ -18,16 +18,38 @@ var tests = []struct {
 
 foo bar
 baz qux
-zot = frob
+optional = equalsign
+desc long line with \
+continuation character
+longdesc <<EOT
+really long description
+with extra stuff
+EOT
 `,
 		map[string]interface{}{
-			"foo": "bar",
-			"baz": "qux",
-			"zot": "frob",
+			"foo":      "bar",
+			"baz":      "qux",
+			"optional": "equalsign",
+			"desc":     "long line with continuation character",
+			"longdesc": "really long description with\nextra stuff",
 		},
 	},
 	{
-		// blocks
+		// array blocks
+		`
+<array>
+    entry1
+    entry2
+    entry3
+</array>
+`,
+		map[string]interface{}{
+			"array": []string{"entry1", "entry2", "entry3"},
+		},
+	},
+
+	{
+		// kv blocks
 		`
 <dir dir1>
 foo1 bar1
