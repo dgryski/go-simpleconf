@@ -1,6 +1,7 @@
 package simpleconf
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -143,7 +144,9 @@ func TestReadConfig(t *testing.T) {
 		r := strings.NewReader(tt.input)
 		m, err := NewFromReader(r)
 		if err != nil || !reflect.DeepEqual(m, tt.output) {
-			t.Errorf("failed test %d: got %#v expected %#v (err=%s)\n", i, m, tt.output, err)
+			jg, _ := json.MarshalIndent(m, "", "  ")
+			je, _ := json.MarshalIndent(tt.output, "", "  ")
+			t.Errorf("failed test %d: got\n%s\nexpected\n%s\n(err=%s)\n", i, string(jg), string(je), err)
 		}
 	}
 }
