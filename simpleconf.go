@@ -137,6 +137,8 @@ func (p *pathlist) pop() string {
 	return n
 }
 
+var commentRegexp = regexp.MustCompile(`#.*$`)
+
 func parse(state *parser, blockType string) (map[string]interface{}, error) {
 
 	m := make(map[string]interface{})
@@ -144,6 +146,8 @@ func parse(state *parser, blockType string) (map[string]interface{}, error) {
 	for state.scanner.Scan() {
 		line := state.scanner.Text()
 		line = strings.TrimLeftFunc(line, unicode.IsSpace)
+
+		line = commentRegexp.ReplaceAllString(line, "")
 
 		if len(line) == 0 || line[0] == '#' {
 			// blank line or comment, skip
@@ -317,6 +321,9 @@ func parseItem(state *parser, line string) (string, string, error) {
 				nl = true
 			}
 		} else {
+			// nope, our line is just our value,
+			// trim trailing spaces
+			line = strings.TrimSpace(line)
 			buf.WriteString(line)
 		}
 	}
