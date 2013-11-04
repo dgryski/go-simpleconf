@@ -305,6 +305,8 @@ func parseItem(state *parser, line string) (string, string, error) {
 			for line[len(line)-1] == '\\' && state.scanner.Scan() {
 				buf.WriteString(line[:len(line)-1])
 				line = state.scanner.Text()
+				// remove leading space for continued lines
+				line = strings.TrimLeftFunc(line, unicode.IsSpace)
 			}
 			buf.WriteString(line)
 		} else if strs := heredocRegexp.FindStringSubmatch(line); len(strs) != 0 {

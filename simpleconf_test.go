@@ -23,8 +23,8 @@ optional = equalsign
 equals= nospace
 UPPERCASE lowercase
 desc long line with \
-at least two \
-continuation characters
+    at least two \
+    continuation characters
 longdesc <<EOT
 really long description
 with extra stuff
