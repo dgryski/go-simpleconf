@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -18,7 +19,8 @@ import (
 // NewFromReader loads a configuration from r
 func NewFromReader(r io.Reader) (map[string]interface{}, error) {
 	scanner := bufio.NewScanner(r)
-	return parse(scanner, "")
+	p := &parser{scanner: scanner}
+	return parse(p, "")
 }
 
 // NewFromFile loads a configuration file
@@ -28,7 +30,12 @@ func NewFromFile(file string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	return NewFromReader(f)
+	dir, _ := filepath.Split(file)
+
+	scanner := bufio.NewScanner(f)
+
+	p := &parser{scanner: scanner, pathList: pathlist([]string{dir})}
+	return parse(p, "")
 }
 
 func addValue(m map[string]interface{}, key string, value interface{}) error {
@@ -111,12 +118,31 @@ func merge(m map[string]interface{}, blockType, blockName string, block map[stri
 	return nil
 }
 
-func parse(scanner *bufio.Scanner, blockType string) (map[string]interface{}, error) {
+type parser struct {
+	scanner  *bufio.Scanner
+	pathList pathlist
+}
+
+// array-based stack
+type pathlist []string
+
+func (p *pathlist) push(s string) {
+	*p = append(*p, s)
+}
+
+func (p *pathlist) pop() string {
+	l := len(*p) - 1
+	n := (*p)[l]
+	(*p) = (*p)[:l]
+	return n
+}
+
+func parse(state *parser, blockType string) (map[string]interface{}, error) {
 
 	m := make(map[string]interface{})
 
-	for scanner.Scan() {
-		line := scanner.Text()
+	for state.scanner.Scan() {
+		line := state.scanner.Text()
 		line = strings.TrimLeftFunc(line, unicode.IsSpace)
 
 		if len(line) == 0 || line[0] == '#' {
@@ -125,9 +151,9 @@ func parse(scanner *bufio.Scanner, blockType string) (map[string]interface{}, er
 		}
 
 		if strings.HasPrefix(line, "include") {
-			include, err := parseInclude(scanner, line)
+			include, err := parseInclude(state, line)
 			if err != nil {
-				return nil, fmt.Errorf("error processing include %s: %s", line, err)
+				return nil, fmt.Errorf("error processing include [%s]: %s", line, err)
 			}
 
 			for k, v := range include {
@@ -150,7 +176,7 @@ func parse(scanner *bufio.Scanner, blockType string) (map[string]interface{}, er
 		}
 
 		if line[0] == '<' {
-			blockType, blockName, block, err := parseBlock(scanner, line)
+			blockType, blockName, block, err := parseBlock(state, line)
 			if err != nil {
 				return nil, err
 			}
@@ -164,7 +190,7 @@ func parse(scanner *bufio.Scanner, blockType string) (map[string]interface{}, er
 		}
 
 		// single-line config item
-		k, v, err := parseItem(scanner, line)
+		k, v, err := parseItem(state, line)
 		if err != nil {
 			return nil, err
 		}
@@ -178,17 +204,48 @@ func parse(scanner *bufio.Scanner, blockType string) (map[string]interface{}, er
 }
 
 // include filename
-func parseInclude(scanner *bufio.Scanner, line string) (map[string]interface{}, error) {
+func parseInclude(state *parser, line string) (map[string]interface{}, error) {
 
 	file := strings.TrimSpace(strings.TrimPrefix(line, "include"))
 
-	r, err := os.Open(file)
-	if err != nil {
-		return nil, err
+	var r *os.File
+	var fullpath string
+	if file[0] == '/' {
+		// absolute path
+		var err error
+		r, err = os.Open(file)
+		if err != nil {
+			return nil, err
+		}
+		fullpath = file
+	} else {
+		for i := len(state.pathList) - 1; i >= 0; i-- {
+			dir := state.pathList[i]
+			var err error
+			fullpath = dir + "/" + file
+			r, err = os.Open(fullpath)
+			if err == nil {
+				break
+			}
+		}
+
+		if r == nil {
+			// not found :(
+			return nil, fmt.Errorf("could not find %s in search path [%v]", file, state.pathList)
+		}
 	}
 
+	dir, _ := filepath.Split(fullpath)
+	state.pathList.push(dir)
+
 	newscanner := bufio.NewScanner(r)
-	return parse(newscanner, "")
+	p := &parser{scanner: newscanner, pathList: state.pathList}
+
+	m, err := parse(p, "")
+
+	state.pathList.pop()
+
+	return m, err
 }
 
 var blockRegex = regexp.MustCompile(`^\s*<\s*(\w+)\s*(.+?)?\s*>\s*$`) // ugly regexp :(
@@ -197,7 +254,7 @@ var closeRegex = regexp.MustCompile(`^\s*</\s*(\w+)\s*>\s*$`)
 // <foo bar>
 // baz qux
 // </foo>
-func parseBlock(scanner *bufio.Scanner, line string) (string, string, map[string]interface{}, error) {
+func parseBlock(state *parser, line string) (string, string, map[string]interface{}, error) {
 	strs := blockRegex.FindStringSubmatch(line)
 
 	var blockType, blockName string
@@ -208,11 +265,9 @@ func parseBlock(scanner *bufio.Scanner, line string) (string, string, map[string
 
 	blockType, blockName = strs[1], strs[2]
 
-	m, err := parse(scanner, blockType)
+	m, err := parse(state, blockType)
 	return blockType, blockName, m, err
 }
-
-//var lineRegex = regexp.MustCompile(`^\s*(\w*)(?:(?:\s+=\s+)|(?:\s+))(.+?)\s*$`)
 
 var tokRegex = regexp.MustCompile(`^\s*(\S+)\s*=?\s*`)
 
@@ -221,7 +276,7 @@ var tokRegex = regexp.MustCompile(`^\s*(\S+)\s*=?\s*`)
 // val
 var heredocRegexp = regexp.MustCompile(`<<(\w+)$`)
 
-func parseItem(scanner *bufio.Scanner, line string) (string, string, error) {
+func parseItem(state *parser, line string) (string, string, error) {
 
 	strs := tokRegex.FindStringSubmatch(line)
 
@@ -238,15 +293,15 @@ func parseItem(scanner *bufio.Scanner, line string) (string, string, error) {
 	if len(line) > 0 {
 
 		if line[len(line)-1] == '\\' {
-			for line[len(line)-1] == '\\' && scanner.Scan() {
+			for line[len(line)-1] == '\\' && state.scanner.Scan() {
 				buf.WriteString(line[:len(line)-1])
-				line = scanner.Text()
+				line = state.scanner.Text()
 			}
 			buf.WriteString(line)
 		} else if strs := heredocRegexp.FindStringSubmatch(line); len(strs) != 0 {
 			nl := false
-			for scanner.Scan() {
-				line = scanner.Text()
+			for state.scanner.Scan() {
+				line = state.scanner.Text()
 				if strings.HasSuffix(line, strs[1]) {
 					indent := strings.TrimSuffix(line, strs[1])
 					s := strings.Replace(buf.String(), indent, "", 1)
