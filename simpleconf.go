@@ -270,7 +270,7 @@ func parseBlock(state *parser, line string) (string, string, map[string]interfac
 	blockType, blockName = strs[1], strs[2]
 
 	m, err := parse(state, blockType)
-	return strings.ToLower(blockType), strings.ToLower(blockName), m, err
+	return strings.ToLower(blockType), blockName, m, err
 }
 
 var keyRegex = regexp.MustCompile(`(\s*=\s*|\s+)`)

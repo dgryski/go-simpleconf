@@ -77,13 +77,14 @@ foo1 bar1 # this one too
 baz1 qux1
 </dir>
 
-<dir dir2>
+<Dir Dir2>
 foo2 bar2
 baz2 qux2
 <file file1>
 perms 0700
 </file>
-</dir>
+</Dir>
+
 `,
 		map[string]interface{}{
 			"dir": map[string]interface{}{
@@ -91,7 +92,7 @@ perms 0700
 					"foo1": "bar1",
 					"baz1": "qux1",
 				},
-				"dir2": map[string]interface{}{
+				"Dir2": map[string]interface{}{
 					"foo2": "bar2",
 					"baz2": "qux2",
 					"file": map[string]interface{}{
