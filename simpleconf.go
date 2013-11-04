@@ -270,7 +270,7 @@ func parseBlock(state *parser, line string) (string, string, map[string]interfac
 	blockType, blockName = strs[1], strs[2]
 
 	m, err := parse(state, blockType)
-	return blockType, blockName, m, err
+	return strings.ToLower(blockType), strings.ToLower(blockName), m, err
 }
 
 var tokRegex = regexp.MustCompile(`^\s*(\S+)\s*=?\s*`)
@@ -288,7 +288,7 @@ func parseItem(state *parser, line string) (string, string, error) {
 		return "", "", fmt.Errorf("error parsing line [%s]", line)
 	}
 
-	tok := strs[1]
+	tok := strings.ToLower(strs[1])
 	line = strings.TrimPrefix(line, strs[0])
 
 	var buf bytes.Buffer
