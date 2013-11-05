@@ -247,6 +247,10 @@ func parse(state *parser, blockType string) (config, error) {
 
 			incKV := include.(*configKV)
 
+			if m == nil {
+				m = &configKV{}
+			}
+
 			for k, v := range *incKV {
 				err := m.update(k, v)
 				if err != nil {
