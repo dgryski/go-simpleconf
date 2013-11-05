@@ -78,6 +78,21 @@ entry3
 		},
 	},
 	{
+		// k/v array block
+		`
+<array>
+    entry entry1
+    entry entry2
+    entry entry3
+</array>
+`,
+		map[string]interface{}{
+			"array": map[string]interface{}{
+				"entry": map[string]interface{}{"entry1": "", "entry2": "", "entry3": ""},
+			},
+		},
+	},
+	{
 		// kv blocks
 		`
 <dir dir1> # ignore this comment

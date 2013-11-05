@@ -38,7 +38,7 @@ func NewFromFile(file string) (map[string]interface{}, error) {
 	return parse(p, "")
 }
 
-func addValue(m map[string]interface{}, key string, value interface{}) error {
+func addValue(m map[string]interface{}, key string, value interface{}, appendValue bool) error {
 
 	// no key? add
 	var mv interface{}
@@ -48,8 +48,23 @@ func addValue(m map[string]interface{}, key string, value interface{}) error {
 		return nil
 	}
 
+	if vstr, vok := value.(string); vok && appendValue {
+
+		switch mm := mv.(type) {
+		case string:
+			nm := make(map[string]interface{})
+			nm[mm] = ""
+			nm[vstr] = ""
+			m[key] = nm
+		case map[string]interface{}:
+			mm[vstr] = ""
+		}
+
+		return nil
+	}
+
 	// if target value is a string ...
-	if _, ok = mv.(string); ok {
+	if _, ok := mv.(string); ok {
 		if _, vok := value.(string); !vok {
 			return fmt.Errorf("can't overwrite string value for key %s with %s", key, reflect.TypeOf(value))
 		}
@@ -60,7 +75,6 @@ func addValue(m map[string]interface{}, key string, value interface{}) error {
 
 	// both blocks? merge
 	if _, ok := mv.(map[string]interface{}); ok {
-
 		var vbl map[string]interface{}
 		var vok bool
 		if vbl, vok = value.(map[string]interface{}); !vok {
@@ -90,7 +104,7 @@ func merge(m map[string]interface{}, blockType, blockName string, block map[stri
 
 	if blockName == "" {
 		for bk, bv := range block {
-			err := addValue(blockMap, bk, bv)
+			err := addValue(blockMap, bk, bv, false)
 			if err != nil {
 				return err
 			}
@@ -103,7 +117,7 @@ func merge(m map[string]interface{}, blockType, blockName string, block map[stri
 		}
 
 		for bk, bv := range block {
-			err := addValue(oldBlock, bk, bv)
+			err := addValue(oldBlock, bk, bv, false)
 			if err != nil {
 				return err
 			}
@@ -161,7 +175,7 @@ func parse(state *parser, blockType string) (map[string]interface{}, error) {
 			}
 
 			for k, v := range include {
-				err := addValue(m, k, v)
+				err := addValue(m, k, v, false)
 				if err != nil {
 					return nil, err
 				}
@@ -198,7 +212,7 @@ func parse(state *parser, blockType string) (map[string]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = addValue(m, k, v)
+		err = addValue(m, k, v, true)
 		if err != nil {
 			return nil, err
 		}
