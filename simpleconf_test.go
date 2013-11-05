@@ -1,8 +1,8 @@
 package simpleconf
 
 import (
+	"bytes"
 	"encoding/json"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -14,7 +14,7 @@ var tests = []struct {
 	{
 		// basics
 		`
-                # this is a comment, followed by a blank line
+# this is a comment, followed by a blank line
 
 foo bar
 baz qux
@@ -22,7 +22,7 @@ yes yes
 no no
 t true
 f false
-valuewith trailing spaces    
+valuewith trailing spaces     
 optional = equalsign
 equals= nospace
 UPPERCASE lowercase
@@ -60,8 +60,8 @@ EOT
 entry1
 entry2
 entry3
-`,
-		map[string]interface{}{"entry1": "", "entry2": "", "entry3": ""},
+		`,
+		[]string{"entry1", "entry2", "entry3"},
 	},
 
 	{
@@ -74,7 +74,7 @@ entry3
 </array>
 `,
 		map[string]interface{}{
-			"array": map[string]interface{}{"entry1": "", "entry2": "", "entry3": ""},
+			"array": []string{"entry1", "entry2", "entry3"},
 		},
 	},
 	{
@@ -88,7 +88,7 @@ entry3
 `,
 		map[string]interface{}{
 			"array": map[string]interface{}{
-				"entry": map[string]interface{}{"entry1": "", "entry2": "", "entry3": ""},
+				"entry": []string{"entry1", "entry2", "entry3"},
 			},
 		},
 	},
@@ -107,8 +107,8 @@ baz2 qux2
 perms 0700
 </file>
 </Dir>
-
 `,
+
 		map[string]interface{}{
 			"dir": map[string]interface{}{
 				"dir1": map[string]interface{}{
@@ -210,9 +210,11 @@ func TestReadConfig(t *testing.T) {
 	for i, tt := range tests {
 		r := strings.NewReader(tt.input)
 		m, err := NewFromReader(r)
-		if err != nil || !reflect.DeepEqual(m, tt.output) {
-			jg, _ := json.MarshalIndent(m, "", "  ")
-			je, _ := json.MarshalIndent(tt.output, "", "  ")
+
+		jg, _ := json.MarshalIndent(m, "", "  ")
+		je, _ := json.MarshalIndent(tt.output, "", "  ")
+
+		if err != nil || !bytes.Equal(jg, je) {
 			t.Errorf("failed test %d: got\n%s\nexpected\n%s\n(err=%s)\n", i, string(jg), string(je), err)
 		}
 	}
