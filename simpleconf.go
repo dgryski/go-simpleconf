@@ -17,26 +17,17 @@ import (
 )
 
 type config interface {
-	// adds a 'config' as a value for 'target'
-	update(string, config) error
 	insert(string, config) error
-	// merges the config in
-	merge(string, string, config) error
 }
 
 type configStr string
 
-func (c *configStr) update(string, config) error        { panic("can't add string to string") }
-func (c *configStr) insert(string, config) error        { panic("can't add string to string") }
-func (c *configStr) merge(string, string, config) error { panic("can't merge with string target") }
+func (c *configStr) insert(string, config) error { panic("can't add string to string") }
 
 type configKV map[string]config
 
 type configList []string
 
-func (c *configList) merge(string, string, config) error { panic("can't merge with list target") }
-
-func (c *configList) update(key string, value config) error { panic("can't update config list") }
 func (c *configList) insert(key string, value config) error {
 
 	switch cc := value.(type) {
@@ -189,10 +180,15 @@ func (c configKV) merge(blockType, blockName string, block config) error {
 		return nil
 	}
 
+	subtargetkv, ok := subtarget.(*configKV)
+	if !ok {
+		return fmt.Errorf("key type conflict while merging block(%s, %s)", blockType, blockName)
+	}
+
 	// recursively add all keys from block into subtarget
 	if bkv, ok := block.(*configKV); ok {
 		for bk, bv := range *bkv {
-			err := subtarget.update(bk, bv)
+			err := subtargetkv.update(bk, bv)
 			if err != nil {
 				return err
 			}
@@ -251,8 +247,13 @@ func parse(state *parser, blockType string) (config, error) {
 				m = &configKV{}
 			}
 
+			mkv, ok := m.(*configKV)
+			if !ok {
+				return nil, fmt.Errorf("can't merge include into non-k/v config section")
+			}
+
 			for k, v := range *incKV {
-				err := m.update(k, v)
+				err := mkv.update(k, v)
 				if err != nil {
 					return nil, err
 				}
@@ -280,7 +281,12 @@ func parse(state *parser, blockType string) (config, error) {
 				m = &configKV{}
 			}
 
-			err = m.merge(blockType, blockName, block)
+			mkv, ok := m.(*configKV)
+			if !ok {
+				return nil, fmt.Errorf("can't merge (%s,%s) into non-k/v config section", blockType, blockName)
+			}
+
+			err = mkv.merge(blockType, blockName, block)
 			if err != nil {
 				return nil, err
 			}
