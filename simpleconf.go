@@ -16,29 +16,29 @@ import (
 	"unicode"
 )
 
-type config interface {
-	insert(string, config) error
+type Config interface {
+	insert(string, Config) error
 }
 
-type configStr string
+type Str string
 
-func (c *configStr) insert(string, config) error { panic("can't add string to string") }
+func (c *Str) insert(string, Config) error { panic("can't add string to string") }
 
-type configKV map[string]config
+type KV map[string]Config
 
-type configList []string
+type List []string
 
-func (c *configList) insert(key string, value config) error {
+func (c *List) insert(key string, value Config) error {
 
 	switch cc := value.(type) {
 
-	case *configStr:
+	case *Str:
 		if len(*cc) > 0 {
 			return fmt.Errorf("can't append k/v pairs to array list")
 		}
 		*c = append(*c, string(key))
 
-	case *configList:
+	case *List:
 		*c = append(*c, *cc...)
 
 	default:
@@ -50,14 +50,14 @@ func (c *configList) insert(key string, value config) error {
 }
 
 // NewFromReader loads a configuration from r
-func NewFromReader(r io.Reader) (config, error) {
+func NewFromReader(r io.Reader) (Config, error) {
 	scanner := bufio.NewScanner(r)
 	p := &parser{scanner: scanner}
 	return parse(p, "")
 }
 
 // NewFromFile loads a configuration file
-func NewFromFile(file string) (config, error) {
+func NewFromFile(file string) (Config, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func NewFromFile(file string) (config, error) {
 	return parse(p, "")
 }
 
-func (c configKV) insert(key string, value config) error {
+func (c KV) insert(key string, value Config) error {
 
 	// no key? add
 	var mv interface{}
@@ -81,15 +81,15 @@ func (c configKV) insert(key string, value config) error {
 		return nil
 	}
 
-	if vstr, vok := value.(*configStr); vok {
+	if vstr, vok := value.(*Str); vok {
 
 		switch mm := mv.(type) {
-		case *configStr:
-			strs := configList([]string{string(*mm), string(*vstr)})
+		case *Str:
+			strs := List([]string{string(*mm), string(*vstr)})
 			c[key] = &strs
-		case *configList:
+		case *List:
 			*mm = append(*mm, string(*vstr))
-			clist := configList(*mm)
+			clist := List(*mm)
 			c[key] = &clist
 		default:
 			return fmt.Errorf("bad type for string append: %s", reflect.TypeOf(mm))
@@ -101,7 +101,7 @@ func (c configKV) insert(key string, value config) error {
 	return fmt.Errorf("bad type for map insert: %s", reflect.TypeOf(value))
 }
 
-func (c configKV) update(key string, value config) error {
+func (c KV) update(key string, value Config) error {
 
 	// no key? add
 	var mv interface{}
@@ -112,8 +112,8 @@ func (c configKV) update(key string, value config) error {
 	}
 
 	// if target value is a string ...
-	if _, ok := mv.(*configStr); ok {
-		if _, vok := value.(*configStr); !vok {
+	if _, ok := mv.(*Str); ok {
+		if _, vok := value.(*Str); !vok {
 			return fmt.Errorf("can't overwrite string value for key %s with %s", key, reflect.TypeOf(value))
 		}
 
@@ -122,10 +122,10 @@ func (c configKV) update(key string, value config) error {
 	}
 
 	// both blocks? merge
-	if _, ok := mv.(*configKV); ok {
-		var vbl *configKV
+	if _, ok := mv.(*KV); ok {
+		var vbl *KV
 		var vok bool
-		if vbl, vok = value.(*configKV); !vok {
+		if vbl, vok = value.(*KV); !vok {
 			return fmt.Errorf("don't know how to merge block for key %s with %s\n", key, reflect.TypeOf(value))
 		}
 
@@ -136,7 +136,7 @@ func (c configKV) update(key string, value config) error {
 	return fmt.Errorf("bad type for configKV.add(%s): %s", key, reflect.TypeOf(value))
 }
 
-func (c configKV) merge(blockType, blockName string, block config) error {
+func (c KV) merge(blockType, blockName string, block Config) error {
 
 	// try to get target
 	target, ok := c[blockType]
@@ -145,21 +145,21 @@ func (c configKV) merge(blockType, blockName string, block config) error {
 		if blockName == "" {
 			c[blockType] = block
 		} else {
-			newblock := configKV(map[string]config{blockName: block})
+			newblock := KV(map[string]Config{blockName: block})
 			c[blockType] = &newblock
 		}
 		return nil
 	}
 
 	// make sure target is a map
-	targetkv, ok := target.(*configKV)
+	targetkv, ok := target.(*KV)
 	if !ok {
 		return fmt.Errorf("key type conflict while merging block(%s, %s)", blockType, blockName)
 	}
 
 	// merge unnamed block
 	if blockName == "" {
-		if bb, ok := block.(*configKV); ok {
+		if bb, ok := block.(*KV); ok {
 			for bk, bv := range *bb {
 				err := targetkv.update(bk, bv)
 				if err != nil {
@@ -174,19 +174,19 @@ func (c configKV) merge(blockType, blockName string, block config) error {
 	}
 
 	// no config for this name?  just assign
-	var subtarget config
+	var subtarget Config
 	if subtarget, ok = (*targetkv)[blockName]; !ok {
 		(*targetkv)[blockName] = block
 		return nil
 	}
 
-	subtargetkv, ok := subtarget.(*configKV)
+	subtargetkv, ok := subtarget.(*KV)
 	if !ok {
 		return fmt.Errorf("key type conflict while merging block(%s, %s)", blockType, blockName)
 	}
 
 	// recursively add all keys from block into subtarget
-	if bkv, ok := block.(*configKV); ok {
+	if bkv, ok := block.(*KV); ok {
 		for bk, bv := range *bkv {
 			err := subtargetkv.update(bk, bv)
 			if err != nil {
@@ -220,9 +220,9 @@ func (p *pathlist) pop() string {
 
 var commentRegexp = regexp.MustCompile(`#.*$`)
 
-func parse(state *parser, blockType string) (config, error) {
+func parse(state *parser, blockType string) (Config, error) {
 
-	var m config
+	var m Config
 
 	for state.scanner.Scan() {
 		line := state.scanner.Text()
@@ -241,13 +241,13 @@ func parse(state *parser, blockType string) (config, error) {
 				return nil, fmt.Errorf("error processing include [%s]: %s", line, err)
 			}
 
-			incKV := include.(*configKV)
+			incKV := include.(*KV)
 
 			if m == nil {
-				m = &configKV{}
+				m = &KV{}
 			}
 
-			mkv, ok := m.(*configKV)
+			mkv, ok := m.(*KV)
 			if !ok {
 				return nil, fmt.Errorf("can't merge include into non-k/v config section")
 			}
@@ -278,10 +278,10 @@ func parse(state *parser, blockType string) (config, error) {
 			}
 
 			if m == nil {
-				m = &configKV{}
+				m = &KV{}
 			}
 
-			mkv, ok := m.(*configKV)
+			mkv, ok := m.(*KV)
 			if !ok {
 				return nil, fmt.Errorf("can't merge (%s,%s) into non-k/v config section", blockType, blockName)
 			}
@@ -302,14 +302,14 @@ func parse(state *parser, blockType string) (config, error) {
 
 		if m == nil {
 			if v != "" {
-				m = &configKV{}
+				m = &KV{}
 			} else {
-				m = &configList{}
+				m = &List{}
 			}
 
 		}
 
-		cstr := configStr(v)
+		cstr := Str(v)
 
 		err = m.insert(k, &cstr)
 		if err != nil {
@@ -321,7 +321,7 @@ func parse(state *parser, blockType string) (config, error) {
 }
 
 // include filename
-func parseInclude(state *parser, line string) (config, error) {
+func parseInclude(state *parser, line string) (Config, error) {
 
 	file := strings.TrimSpace(strings.TrimPrefix(line, "include"))
 
@@ -371,7 +371,7 @@ var closeRegex = regexp.MustCompile(`^\s*</\s*(\w+)\s*>\s*$`)
 // <foo bar>
 // baz qux
 // </foo>
-func parseBlock(state *parser, line string) (string, string, config, error) {
+func parseBlock(state *parser, line string) (string, string, Config, error) {
 	strs := blockRegex.FindStringSubmatch(line)
 
 	var blockType, blockName string
