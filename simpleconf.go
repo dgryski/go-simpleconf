@@ -1,3 +1,4 @@
+// Package simpleconf parses a subset of perl's Config::General module
 package simpleconf
 
 // TODO(dgryski): handle $ENVIRONMENT replacements
@@ -16,16 +17,20 @@ import (
 	"unicode"
 )
 
+// Config is the base interface for all configuration values
 type Config interface {
 	insert(string, Config) error
 }
 
+// Str is a string configuration value
 type Str string
 
 func (c Str) insert(string, Config) error { panic("can't add string to string") }
 
+// KV is a set of key-value configuration items
 type KV map[string]Config
 
+// List is a list of configuration values
 type List []string
 
 func (c *List) insert(key string, value Config) error {
