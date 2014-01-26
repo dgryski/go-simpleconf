@@ -427,7 +427,7 @@ func parseItem(state *parser, line string) (string, string, error) {
 				line = state.scanner.Text()
 				if strings.HasSuffix(line, strs[1]) {
 					indent := strings.TrimSuffix(line, strs[1])
-					s := strings.Replace(buf.String(), indent, "", 1)
+					s := strings.TrimPrefix(buf.String(), indent)
 					s = strings.Replace(s, "\n"+indent, "\n", -1)
 					buf.Reset()
 					buf.WriteString(s)
