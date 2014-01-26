@@ -7,6 +7,8 @@ package simpleconf
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -462,4 +464,24 @@ func parseItem(state *parser, line string) (string, string, error) {
 	}
 
 	return key, val, nil
+}
+
+func UnmarshalConfig(conf Config, key string, v interface{}) error {
+
+	if key != "" {
+
+		keys := strings.Split(key, ">")
+
+		for _, k := range keys {
+			kv, ok := conf.(KV)
+			if !ok {
+				return errors.New("not a simpeconf.KV for key=" + k)
+			}
+			conf = kv[k]
+		}
+	}
+
+	// easiest way to get our configuration data into the structure is to go via JSON
+	js, _ := json.Marshal(conf)
+	return json.Unmarshal(js, v)
 }

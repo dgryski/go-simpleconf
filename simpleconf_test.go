@@ -3,6 +3,7 @@ package simpleconf
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -216,6 +217,43 @@ func TestReadConfig(t *testing.T) {
 
 		if err != nil || !bytes.Equal(jg, je) {
 			t.Errorf("failed test %d: got\n%s\nexpected\n%s\n(err=%s)\n", i, string(jg), string(je), err)
+		}
+	}
+}
+
+func TestUnmarshalConfig(t *testing.T) {
+
+	var tests = []struct {
+		input  string
+		path   string
+		dst    interface{}
+		output interface{}
+	}{
+		{`
+<map>
+    <array>
+        entry entry1
+        entry entry2
+        entry entry3
+    </array>
+</map>
+`,
+
+			"map>array>entry",
+			[]string{},
+			[]string{"entry1", "entry2", "entry3"},
+		},
+	}
+
+	for _, tt := range tests {
+
+		r := strings.NewReader(tt.input)
+		m, _ := NewFromReader(r)
+
+		UnmarshalConfig(m, tt.path, &tt.dst)
+
+		if !reflect.DeepEqual(tt.output, m) {
+
 		}
 	}
 }
