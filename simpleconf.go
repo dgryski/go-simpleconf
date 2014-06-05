@@ -69,6 +69,7 @@ func NewFromFile(file string) (Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	dir, _ := filepath.Split(file)
 
