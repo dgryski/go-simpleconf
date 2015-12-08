@@ -226,8 +226,8 @@ func TestUnmarshalConfig(t *testing.T) {
 	var tests = []struct {
 		input  string
 		path   string
-		dst    interface{}
-		output interface{}
+		dst    []string
+		output []string
 	}{
 		{`
 <map>
@@ -252,8 +252,8 @@ func TestUnmarshalConfig(t *testing.T) {
 
 		UnmarshalConfig(m, tt.path, &tt.dst)
 
-		if !reflect.DeepEqual(tt.output, m) {
-
+		if !reflect.DeepEqual(tt.output, tt.dst) {
+			t.Errorf("Unmarshal(%q,...)=%#v, want %#v", tt.path, tt.dst, tt.output)
 		}
 	}
 }
