@@ -37,7 +37,11 @@ EOT
    indenteddesc <<EOT
    a thing which is
    indented a bit
+   trailing space 
    EOT
+quoted = "a quoted string\nwith\n\tescapes" #comment
+phash str\#foo
+pdollar str\$foo
 `,
 		map[string]interface{}{
 			"foo":          "bar",
@@ -48,11 +52,14 @@ EOT
 			"equals":       "nospace",
 			"desc":         "long line with at least two continuation characters",
 			"longdesc":     "really long description\nwith extra stuff",
-			"indenteddesc": "a thing which is\nindented a bit",
+			"indenteddesc": "a thing which is\nindented a bit\ntrailing space",
 			"yes":          "1",
 			"no":           "0",
 			"t":            "1",
 			"f":            "0",
+			"quoted":       "a quoted string\nwith\n\tescapes",
+			"phash":        "str#foo",
+			"pdollar":      "str$foo",
 		},
 	},
 	{

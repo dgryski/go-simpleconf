@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -229,7 +230,7 @@ func (p *pathlist) pop() string {
 	return n
 }
 
-var commentRegexp = regexp.MustCompile(`#.*$`)
+var commentRegexp = regexp.MustCompile(`[^\\]#.*$`)
 
 func parse(state *parser, blockType string) (Config, error) {
 
@@ -446,6 +447,7 @@ func parseItem(state *parser, line string) (string, string, error) {
 					indent := strings.TrimSuffix(line, strs[1])
 					s := strings.TrimPrefix(buf.String(), indent)
 					s = strings.Replace(s, "\n"+indent, "\n", -1)
+					s = strings.TrimRightFunc(s, unicode.IsSpace)
 					buf.Reset()
 					buf.WriteString(s)
 					break
@@ -457,6 +459,14 @@ func parseItem(state *parser, line string) (string, string, error) {
 				nl = true
 			}
 		} else {
+			if line[0] == '"' {
+				// value was (probably) quoted
+				nline, err := strconv.Unquote(line)
+				if err != nil {
+					return "", "", fmt.Errorf("error unquoting %q: %v", line, err)
+				}
+				line = nline
+			}
 			// nope, our line is just our value,
 			// trim trailing spaces
 			line = strings.TrimSpace(line)
@@ -465,6 +475,11 @@ func parseItem(state *parser, line string) (string, string, error) {
 	}
 
 	val := buf.String()
+
+	if strings.ContainsRune(val, '\\') {
+		val = strings.Replace(val, `\#`, `#`, -1)
+		val = strings.Replace(val, `\$`, `$`, -1)
+	}
 
 	switch val {
 	case "yes", "true":
