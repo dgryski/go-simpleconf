@@ -131,6 +131,10 @@ func (c KV) update(key string, value Config) error {
 
 	// both blocks? merge
 	if _, ok := mv.(KV); ok {
+		if value == nil {
+			// nothing to do
+			return nil
+		}
 		var vbl KV
 		var vok bool
 		if vbl, vok = value.(KV); !vok {
@@ -248,6 +252,11 @@ func parse(state *parser, blockType string) (Config, error) {
 				return nil, fmt.Errorf("error processing include [%s]: %s", line, err)
 			}
 
+			if include == nil {
+				// nothing to do
+				continue
+			}
+
 			incKV := include.(KV)
 
 			if m == nil {
@@ -271,7 +280,7 @@ func parse(state *parser, blockType string) (Config, error) {
 
 		if line[0] == '<' && line[1] == '/' {
 			strs := closeRegex.FindStringSubmatch(line)
-			if strs[1] != blockType {
+			if len(strs) == 0 || strs[1] != blockType {
 				return nil, fmt.Errorf("unexpected closing block while looking for %s", blockType)
 			}
 
