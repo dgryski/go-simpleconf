@@ -459,7 +459,7 @@ func parseItem(state *parser, line string) (string, string, error) {
 				nl = true
 			}
 		} else {
-			if line[0] == '"' {
+			if line[0] == '"' && line[len(line)-1] == '"' {
 				// value was (probably) quoted
 				nline, err := strconv.Unquote(line)
 				if err != nil {

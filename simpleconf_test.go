@@ -40,6 +40,8 @@ EOT
    trailing space 
    EOT
 quoted = "a quoted string\nwith\n\tescapes" #comment
+notquoted1 = string with "quotes"
+notquoted2 = "string with no trailing quote
 phash str\#foo
 pdollar str\$foo
 `,
@@ -60,6 +62,8 @@ pdollar str\$foo
 			"quoted":       "a quoted string\nwith\n\tescapes",
 			"phash":        "str#foo",
 			"pdollar":      "str$foo",
+			"notquoted1":   `string with "quotes"`,
+			"notquoted2":   `"string with no trailing quote`,
 		},
 	},
 	{
