@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"unicode"
 )
@@ -461,12 +460,8 @@ func parseItem(state *parser, line string) (string, string, error) {
 			}
 		} else {
 			if line[0] == '"' && line[len(line)-1] == '"' {
-				// value was (probably) quoted
-				nline, err := strconv.Unquote(line)
-				if err != nil {
-					return "", "", fmt.Errorf("error unquoting %q: %v", line, err)
-				}
-				line = nline
+				// remove the quotes
+				line = line[1 : len(line)-1]
 			}
 			// nope, our line is just our value,
 			// trim trailing spaces

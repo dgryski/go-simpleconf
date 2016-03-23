@@ -40,7 +40,7 @@ EOT
    indented a bit
    trailing space 
    EOT
-quoted = "a quoted string\nwith\n\tescapes" #comment
+quoted = "a quoted string\nwith\nignored escapes" #comment
 notquoted1 = string with "quotes"
 notquoted2 = "string with no trailing quote
 phash str\#foo
@@ -60,7 +60,7 @@ pdollar str\$foo
 			"no":           "0",
 			"t":            "1",
 			"f":            "0",
-			"quoted":       "a quoted string\nwith\n\tescapes",
+			"quoted":       `a quoted string\nwith\nignored escapes`,
 			"phash":        "str#foo",
 			"pdollar":      "str$foo",
 			"notquoted1":   `string with "quotes"`,
