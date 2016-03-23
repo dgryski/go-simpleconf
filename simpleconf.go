@@ -438,6 +438,7 @@ func parseItem(state *parser, line string) (string, string, error) {
 				// remove leading space for continued lines
 				line = strings.TrimLeftFunc(line, unicode.IsSpace)
 			}
+			line = strings.TrimRightFunc(line, unicode.IsSpace)
 			buf.WriteString(line)
 		} else if strs := heredocRegexp.FindStringSubmatch(line); len(strs) != 0 {
 			nl := false

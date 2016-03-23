@@ -29,7 +29,8 @@ equals= nospace
 UPPERCASE lowercase
 desc long line with \
     at least two \
-    continuation characters
+    continuation characters \
+    trailing space 
 longdesc <<EOT
 really long description
 with extra stuff
@@ -52,7 +53,7 @@ pdollar str\$foo
 			"valuewith":    "trailing spaces",
 			"uppercase":    "lowercase",
 			"equals":       "nospace",
-			"desc":         "long line with at least two continuation characters",
+			"desc":         "long line with at least two continuation characters trailing space",
 			"longdesc":     "really long description\nwith extra stuff",
 			"indenteddesc": "a thing which is\nindented a bit\ntrailing space",
 			"yes":          "1",
