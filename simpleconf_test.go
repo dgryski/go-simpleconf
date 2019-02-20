@@ -141,6 +141,41 @@ perms 0700
 		},
 	},
 	{
+		// kv blocks with extra data after the closing directive
+		`
+<dir dir1> # ignore this comment
+foo1 bar1 # this one too
+baz1 qux1
+</dir dir1>
+
+<Dir Dir2>
+foo2 bar2
+baz2 qux2
+<file file1>
+perms 0700
+</file filebar>
+</Dir Dir2>
+`,
+
+		map[string]interface{}{
+			"dir": map[string]interface{}{
+				"dir1": map[string]interface{}{
+					"foo1": "bar1",
+					"baz1": "qux1",
+				},
+				"Dir2": map[string]interface{}{
+					"foo2": "bar2",
+					"baz2": "qux2",
+					"file": map[string]interface{}{
+						"file1": map[string]interface{}{
+							"perms": "0700",
+						},
+					},
+				},
+			},
+		},
+	},
+	{
 		// unnamed blocks
 		`
 <dir>

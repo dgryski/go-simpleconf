@@ -382,7 +382,16 @@ func parseInclude(state *parser, line string) (Config, error) {
 }
 
 var blockRegex = regexp.MustCompile(`^\s*<\s*(\w+)\s*(.+?)?\s*>\s*$`) // ugly regexp :(
-var closeRegex = regexp.MustCompile(`^\s*</\s*(\w+)\s*>\s*$`)
+// note the extra (?:\w+\s*)? -- this is needed because it is a common mistake to
+// do this:
+// <foo bar>
+//   baz
+// </foo bar>
+//
+// With an extraneous 'bar' after the closing </foo>.  Correctness says
+// we should reject this, but most simpleconf parsers (e.g. Perl's) just
+// silently accept it.
+var closeRegex = regexp.MustCompile(`^\s*</\s*(\w+)\s*(?:\w+\s*)?>\s*$`)
 
 // <foo bar>
 // baz qux
